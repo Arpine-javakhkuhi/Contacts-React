@@ -1,0 +1,1 @@
+exports.contacts = [{id: 1, name: "Arpi", phone: "099884477"}];
