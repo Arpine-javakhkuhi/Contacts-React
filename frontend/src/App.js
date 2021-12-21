@@ -1,19 +1,20 @@
 import React, { useEffect, useState } from "react";
-import ContactsForm from "./Components/Contacts/Form/ContactsForm";
-import ContactsList from "./Components/Contacts/List/ContactsList";
-import Loader from "./Components/Helper/Loader";
+import Header from "./components/Header/Header";
+import ContactsForm from "./components/Contacts/Form/ContactsForm";
+import ContactsList from "./components/Contacts/List/ContactsList";
+import Loader from "./components/Helper/Loader";
 
 function App() {
-  let [contacts, setContacts] = useState([]);
+  let [contacts, setContacts] = useState(null);
   const [contact, setContact] = useState({});
   const [edit, setEdit] = useState(false);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const requestUrl = "http://localhost:5050/api/contacts";
+  const baseUrl = "http://localhost:5050/api/contacts";
 
   const getAllContacts = () => {
-    fetch(requestUrl)
+    fetch(baseUrl)
       .then((resp) => {
         return resp.json();
       })
@@ -28,16 +29,13 @@ function App() {
   }, []);
 
   /* Add contact */
-  function addContact(newContact) {
-    fetch(requestUrl, {
+  const addContact = (newContact) => {
+    fetch(baseUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        name: newContact.name,
-        phone: newContact.phone,
-      }),
+      body: JSON.stringify(newContact),
     })
       .then((resp) => {
         return resp.json();
@@ -46,39 +44,34 @@ function App() {
         if (resp && resp.error) {
           setError(resp.error);
         } else {
-          setContacts(
-            contacts.concat([
-              {
-                name: resp.name,
-                phone: resp.phone,
-                id: resp.id,
-              },
-            ])
-          );
+          setContacts([
+            ...contacts,
+            {
+              name: resp.name,
+              phone: resp.phone,
+              id: resp.id,
+            },
+          ]);
           setError(false);
           setContact({});
           setEdit(false);
         }
       });
-  }
+  };
 
-  function findContact(id) {
-    const contact = contacts.find((contact) => contact.id === id);
-    setContact(contact);
+  const findContact = (id) => {
+    setContact(contacts.find((contact) => contact.id === id));
     setEdit(true);
-  }
+  };
 
   /* Edit contact */
-  function editContact(updatedContact) {
-    fetch(`${requestUrl}/${updatedContact.id}`, {
+  const editContact = (updatedContact) => {
+    fetch(`${baseUrl}/${updatedContact.id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        name: updatedContact.name,
-        phone: updatedContact.phone,
-      }),
+      body: JSON.stringify(updatedContact),
     })
       .then((resp) => {
         return resp.json();
@@ -90,8 +83,8 @@ function App() {
           setError(false);
           setContacts(
             contacts.map((contact) => {
-              if (contact.id === resp.id) {
-                contact = resp;
+              if (contact.id === updatedContact.id) {
+                contact = updatedContact;
               }
               return contact;
             })
@@ -100,29 +93,28 @@ function App() {
           setEdit(false);
         }
       });
-  }
+  };
 
   /* Delete contact */
-  function deleteContact(id) {
-    fetch(`${requestUrl}/${id}`, {
+  const deleteContact = (id) => {
+    fetch(`${baseUrl}/${id}`, {
       method: "DELETE",
     }).then((resp) => {
       if (resp.error) {
         setError(resp.error);
-      } else if (resp.status < 400) {
-        contacts = contacts.filter((contact) => contact.id !== id);
-        setContacts(contacts);
+      } else {
+        setContacts(contacts.filter((contact) => contact.id !== id));
       }
     });
-  }
+  };
 
   return (
     <div className="wrapper">
-      <h1>Contacts</h1>
+      <Header />
 
       {loading && <Loader />}
 
-      {contacts.length ? (
+      {contacts && contacts.length ? (
         <ContactsList
           contacts={contacts}
           findContactById={findContact}
@@ -132,12 +124,15 @@ function App() {
         <p>No contacts</p>
       )}
 
-      <ContactsForm
-        contact={contact}
-        edit={edit}
-        onSubmit={addContact}
-        onEdit={editContact}
-      />
+      {!loading ? (
+        <ContactsForm
+          formTitle={edit ? "Edit contact" : "Add contact"}
+          contact={contact}
+          edit={edit}
+          onSubmit={addContact}
+          onEdit={editContact}
+        />
+      ) : null}
 
       {error ? <p className="error">{error}</p> : null}
     </div>
